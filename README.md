@@ -1,4 +1,4 @@
-# Mini Project 2 — Object Counting: Deteksi dan Penghitungan Mobil pada Citra Aerial Parkiran
+# Mini Project 2 — Object Counting: Deteksi dan Penghitungan Mobil pada Citra Area Parkiran
 
 **Mata Kuliah:** Pengolahan Citra dan Video
 
