@@ -4,18 +4,9 @@
 
 ---
 
-## Identitas
-
-| Atribut | Keterangan |
-|--------|------------|
-| **Nama** | [Nama Lengkap] |
-| **NRP** | [NRP] |
-
----
-
 ## Jumlah Mobil Terdeteksi
 
-Program mendeteksi **[X] mobil** pada citra input `parking_ori.jpg`.
+Program mendeteksi **91 mobil** pada citra input `parking_ori.jpg`.
 
 > Nilai ini dihasilkan secara otomatis berdasarkan pipeline thresholding dan filtering kontur dengan batasan area MIN\_AREA = 100 piksel dan MAX\_AREA = 2000 piksel.
 
@@ -192,7 +183,7 @@ Setelah program selesai berjalan, hasil akan tersimpan secara otomatis pada:
 ```
 TUGAS/
 └── output/
-    ├── result.png                       # Citra akhir dengan bounding box
+    ├── result.png                       
     └── steps/
         ├── 1_color_space_gray.png
         ├── 1_color_space_hsv_v.png
