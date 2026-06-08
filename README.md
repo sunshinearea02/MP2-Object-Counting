@@ -1,6 +1,8 @@
 # Mini Project 2 — Object Counting: Deteksi dan Penghitungan Mobil pada Citra Area Parkiran
 
 **Mata Kuliah:** Pengolahan Citra dan Video
+**Nama:** Athaya Khairani Adi  
+**NRP:** 5024241007  
 
 ---
 
