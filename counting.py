@@ -9,7 +9,7 @@ image_path = "input/parking_ori.jpg"
 img = cv2.imread(image_path)
 
 if img is None:
-    print(f"Error: Gambar tidak ditemukan di {image_path}. Periksa folder input kamu!")
+    print(f"Error: Gambar tidak ditemukan di {image_path}")
     exit()
 
 img_out = img.copy()
@@ -27,7 +27,7 @@ cv2.imwrite("output/steps/1_color_space_hsv_v.png", v_channel)
 cv2.imwrite("output/steps/1_color_space_lab_l.png", l_channel)
 
 blur = cv2.GaussianBlur(gray, (5, 5), 0)
-cv2.imwrite("TUGAS/output/steps/2_gaussian_blur.png", blur)
+cv2.imwrite("output/steps/2_gaussian_blur.png", blur)
 
 ret, thresh = cv2.threshold(blur, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
 cv2.imwrite("output/steps/3_otsu_threshold.png", thresh)
@@ -36,11 +36,11 @@ kernel = np.ones((3, 3), np.uint8)
 
 #closing
 morph_close = cv2.morphologyEx(thresh, cv2.MORPH_CLOSE, kernel, iterations=2)
-cv2.imwrite("TUGAS/output/steps/4_morphology_close.png", morph_close)
+cv2.imwrite("output/steps/4_morphology_close.png", morph_close)
 
 #opening
 morph_clean = cv2.morphologyEx(morph_close, cv2.MORPH_OPEN, kernel, iterations=1)
-cv2.imwrite("TUGAS/output/steps/5_morphology_open_clean.png", morph_clean)
+cv2.imwrite("output/steps/5_morphology_open_clean.png", morph_clean)
 
 contours, _ = cv2.findContours(morph_clean, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
