@@ -250,4 +250,10 @@ Jalankan perintah berikut dari direktori utama proyek:
 python counting.py
 ```
 
+## Hasil Program
+
+![Figure 1](output/matplotlib/figure1.png)
+![Figure 2](output/matplotlib/figure2.png)
+![Hasil Perhitungan](output/matplotlib/hasilperhitungan.png)
+
 Program akan mencetak jumlah kendaraan yang terdeteksi ke terminal dan menyimpan seluruh file output secara otomatis. Selain itu, dua jendela visualisasi matplotlib akan ditampilkan secara langsung: satu untuk perbandingan format warna di Tahap 1 dan satu untuk alur kerja pipeline lengkap dari citra asli hingga hasil deteksi akhir.
