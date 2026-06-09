@@ -44,8 +44,8 @@ cv2.imwrite("TUGAS/output/steps/5_morphology_open_clean.png", morph_clean)
 
 contours, _ = cv2.findContours(morph_clean, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
-MIN_AREA = 100  
-MAX_AREA = 2000 
+MIN_AREA = 3000  
+MAX_AREA = 50000 
 
 car_count = 0
 
