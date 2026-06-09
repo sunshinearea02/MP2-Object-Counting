@@ -173,7 +173,7 @@ contours, _ = cv2.findContours(morph_clean, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_
 
 | Aspek | Sesudah Opening (Input Kontur) | Hasil Akhir Deteksi |
 |-------|-------------------------------|---------------------|
-| **Gambar** | ![Open](output/steps/5_morphology_open_clean.png) | ![Result](output/result.png) |
+| **Gambar** | ![Open](output/steps/5_morphology_open_clean.png) | ![Result](output/finalresult.png) |
 | **Representasi** | Citra biner, warna putih = kandidat kendaraan | Citra asli dengan bounding box hijau dan nomor merah |
 | **Jumlah objek** | Seluruh bentuk termasuk noise sisa | Hanya bentuk yang memenuhi rentang area 3000-50000 piksel |
 
