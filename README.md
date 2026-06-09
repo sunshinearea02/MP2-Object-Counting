@@ -188,7 +188,7 @@ contours, _ = cv2.findContours(morph_clean, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_
 |-------|-------------------------------|---------------------|
 | **Gambar** | ![Open](output/steps/5_morphology_open_clean.png) | ![Result](output/result.png) |
 | **Representasi** | Citra biner, warna putih = kandidat kendaraan | Citra asli dengan bounding box hijau dan nomor merah |
-| **Jumlah objek** | Seluruh bentuk termasuk noise sisa | Hanya bentuk yang memenuhi rentang area 100-2000 piksel |
+| **Jumlah objek** | Seluruh bentuk termasuk noise sisa | Hanya bentuk yang memenuhi rentang area 3000-50000 piksel |
 
 ---
 
@@ -200,7 +200,7 @@ contours, _ = cv2.findContours(morph_clean, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_
 |-----|---------|-------------------|-------------|
 | 1 | Mobil yang parkir berdekatan menyatu jadi satu bentuk | Dua atau lebih mobil terhitung sebagai satu | Jarak antarmobil terlalu kecil sehingga bentuknya bergabung setelah diproses |
 | 2 | Mobil berwarna gelap (hitam, abu tua) tidak terdeteksi | Mobil tersebut tidak muncul di hasil dan tidak terhitung | Warna gelapnya terlalu mirip dengan aspal sehingga ikut "hilang" saat thresholding |
-| 3 | Batas ukuran (100-2000 piksel) tidak fleksibel | Kalau foto diambil dari ketinggian berbeda, batas ini perlu diubah manual | Nilai batas tidak disesuaikan secara otomatis dengan ukuran foto |
+| 3 | Batas ukuran (3000-50000 piksel) tidak fleksibel | Kalau foto diambil dari ketinggian berbeda, batas ini perlu diubah manual | Nilai batas tidak disesuaikan secara otomatis dengan ukuran foto |
 
 ### Potensi Peningkatan
 
@@ -208,7 +208,7 @@ contours, _ = cv2.findContours(morph_clean, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_
 |-----|--------|-----------|
 | 1 | Watershed Algorithm (`cv2.watershed`) | Bisa memisahkan mobil-mobil yang menyatu agar masing-masing terhitung terpisah |
 | 2 | Distance Transform | Membantu memisahkan objek yang saling menempel sebelum dihitung |
-| 3 | Batas ukuran otomatis | Batas 100-2000 piksel disesuaikan otomatis dengan resolusi foto agar tidak perlu diubah manual |
+| 3 | Batas ukuran otomatis | Batas 3000-50000 piksel disesuaikan otomatis dengan resolusi foto agar tidak perlu diubah manual |
 ---
 
 ## Cara Menjalankan Program
