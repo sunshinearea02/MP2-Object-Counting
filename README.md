@@ -98,7 +98,6 @@ ret, thresh = cv2.threshold(blur, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
 | Aspek | Sebelum Thresholding (Blur) | Sesudah Otsu Thresholding |
 |-------|-----------------------------|--------------------------|
 | **Gambar** | ![Blur](output/steps/2_gaussian_blur.png) | ![Otsu](output/steps/3_otsu_threshold.png) |
-| **File** | `steps/2_gaussian_blur.png` | `steps/3_otsu_threshold.png` |
 | **Representasi** | Grayscale (0-255) | Biner: 0 (hitam) atau 255 (putih) |
 | **Piksel putih** | Tidak ada | Area dengan intensitas di atas nilai threshold Otsu |
 | **Piksel hitam** | Tidak ada | Area aspal dan latar gelap |
