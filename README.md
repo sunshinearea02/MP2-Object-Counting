@@ -20,13 +20,15 @@ Pipeline yang digunakan adalah pendekatan **threshold-based** yang dikombinasika
 ### Alur Pengolahan Citra
 
 1. Citra Asli (BGR)
-2. Konversi Color Space → Grayscale
-3. Gaussian Blur (Kernel 5×5)
+2. Konversi ke Grayscale
+3. Gaussian Blur (5×5)
 4. Otsu Thresholding
-5. Morphological Closing (Kernel 3×3, 2 Iterasi)
-6. Morphological Opening (Kernel 3×3, 1 Iterasi)
-7. findContours + Filter Area
-8. Bounding Box dan Penghitungan Objek
+5. Morphological Closing (3×3, 2 iterasi)
+6. Morphological Opening (3×3, 1 iterasi)
+7. Deteksi Kontur (findContours)
+8. Filtering Luas Area (3000–50000 piksel)
+9. Bounding Box dan Penomoran Objek
+10. Penghitungan Jumlah Mobil
 
 ---
 
@@ -166,7 +168,7 @@ contours, _ = cv2.findContours(morph_clean, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_
 |-------|-----------|
 | **Mode deteksi** | `RETR_EXTERNAL`: hanya mendeteksi kontur paling luar, kontur di dalam objek diabaikan |
 | **Metode aproksimasi** | `CHAIN_APPROX_SIMPLE`: mengompresi segmen menjadi titik ujungnya saja untuk efisiensi memori |
-| **Filter MIN_AREA** | 300 piksel: Bentuk yang terlalu kecil dari ini dianggap noise, bukan mobil |
+| **Filter MIN_AREA** | 3000 piksel: Bentuk yang terlalu kecil dari ini dianggap noise, bukan mobil |
 | **Filter MAX_AREA** | 50000 piksel: Bentuk yang terlalu besar dari ini dianggap bukan satu mobil (mungkin dua mobil yang menyatu atau objek lain) |
 | **Bounding box** | Kotak hijau digambar pada tiap kendaraan yang lolos filter |
 | **Label** | Nomor urut berwarna merah ditulis di atas tiap bounding box |
