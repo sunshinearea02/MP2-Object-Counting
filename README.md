@@ -10,107 +10,185 @@
 
 Program mendeteksi **91 mobil** pada citra input `parking_ori.jpg`.
 
-> Nilai ini dihasilkan secara otomatis berdasarkan pipeline thresholding dan filtering kontur dengan batasan area MIN\_AREA = 100 piksel dan MAX\_AREA = 2000 piksel.
-
+> Angka ini didapat setelah menyaring semua objek berdasarkan ukurannya (filtering kontur) — hanya objek dengan luas antara 100 hingga 2000 piksel yang dihitung sebagai mobil.
 ---
 
 ## Penjelasan Pipeline
 
-Pipeline yang digunakan dalam program ini adalah pendekatan **threshold-based** yang dikombinasikan dengan operasi morfologi. Setiap tahapan dirancang secara berurutan untuk menghasilkan segmentasi yang bersih sebelum dilakukan penghitungan objek.
+Pipeline yang digunakan adalah pendekatan **threshold-based** yang dikombinasikan dengan operasi morfologi. Secara garis besar, program ini bekerja dengan cara mengubah foto berwarna menjadi hitam-putih, lalu membersihkan hasilnya, dan terakhir menghitung objek yang bentuk dan ukurannya menyerupai mobil.
 
-### Tahap 1: Eksplorasi Color Space
-
-Citra asli dikonversi ke tiga ruang warna berbeda untuk analisis awal karakteristik visual:
-
-- **Grayscale** (`cv2.cvtColor` dengan `COLOR_BGR2GRAY`): Menghasilkan representasi intensitas piksel yang paling sederhana dan komputasional ringan.
-- **Channel V dari HSV** (`COLOR_BGR2HSV`): Channel Value merepresentasikan kecerahan (brightness) piksel, berguna untuk membedakan objek terang (mobil) dari latar gelap (aspal).
-- **Channel L dari LAB** (`COLOR_BGR2LAB`): Channel Lightness pada ruang warna LAB bersifat lebih perseptual dan seragam dibanding grayscale biasa.
-
-**Alasan pemilihan:** Eksplorasi awal ini dilakukan untuk menentukan representasi terbaik yang memisahkan mobil dari aspal. Setelah analisis visual, channel **grayscale** dipilih karena menghasilkan kontras yang cukup baik antara badan mobil dan permukaan jalan.
+```
+Citra Asli (BGR)
+      |
+      v
+[Tahap 1] Konversi Color Space  -->  Grayscale / HSV-V / LAB-L
+      |
+      v  (dipilih: Grayscale)
+[Tahap 2] Gaussian Blur (kernel 5x5) -->  haluskan foto, kurangi noise
+      |
+      v
+[Tahap 3] Otsu Thresholding  -->  ubah jadi hitam-putih otomatis
+      |
+      v
+[Tahap 4a] Morphological Closing (kernel 3x3, 2 iterasi)
+      |
+      v
+[Tahap 4b] Morphological Opening (kernel 3x3, 1 iterasi)
+      |
+      v
+[Tahap 5] findContours + Filter Area  -->  Bounding Box + Penghitungan
+```
 
 ---
 
-### Tahap 2: Preprocessing dengan Gaussian Blur
+## Visualisasi dan Analisis Tahapan Pipeline
+
+### Tahap 0: Citra Asli
+
+| | |
+|---|---|
+| **Gambar** | ![Citra Asli](input/parking_ori.jpg) |
+| **Format** | BGR (Blue-Green-Red), 3 channel warna |
+| **Kondisi** | Foto area parkiran dengan pencahayaan alami |
+| **Karakteristik** | Terdapat kendaraan, aspal, marka jalan, dan bayangan |
+
+---
+
+### Tahap 1: Pilih Format Warna yang Paling Jelas
+
+Citra asli dikonversi ke tiga ruang warna, lalu memilih mana yang paling jelas membedakan mobil dari aspal.
+
+| Aspek | Grayscale | HSV — Channel V | LAB — Channel L |
+|-------|-----------|-----------------|-----------------|
+| **Gambar** | ![Gray](output/steps/1_color_space_gray.png) | ![HSV V](output/steps/1_color_space_hsv_v.png) | ![LAB L](output/steps/1_color_space_lab_l.png) 
+| **Cara kerjanya** | Foto diubah jadi abu-abu berdasarkan terang-gelapnya tiap piksel | Diambil hanya info kecerahan dari ruang warna HSV | Diambil hanya info kecerahan dari ruang warna LAB, lebih sesuai cara mata manusia melihat |
+| **Kelebihan** | Simpel, ringan, kontras mobil-aspal cukup terlihat | Kendaraan terang tampak lebih menonjol dari latar | Hasil lebih konsisten karena mengikuti persepsi visual manusia |
+| **Kekurangan** | Mobil warna gelap susah dibedakan dari aspal | Mobil gelap tetap menyatu dengan latar | Prosesnya lebih berat, dan hasilnya tidak terlalu berbeda dari grayscale biasa |
+
+**Keputusan:** Channel **Grayscale** dipilih untuk tahap selanjutnya karena hasilnya cukup bagus untuk membedakan mobil dari aspal, dan prosesnya paling ringan dibanding dua format lainnya.
+
+---
+
+### Tahap 2: Gaussian Blur
 
 ```python
 blur = cv2.GaussianBlur(gray, (5, 5), 0)
 ```
 
-Gaussian Blur diterapkan pada citra grayscale menggunakan kernel berukuran 5x5. Operasi ini meratakan variasi intensitas piksel akibat noise, bayangan kecil, atau tekstur permukaan yang tidak relevan.
+Setelah foto diubah ke grayscale, foto dihaluskan dulu sebelum diproses lebih lanjut.
+| Aspek | Sebelum (Grayscale) | Sesudah (Gaussian Blur) |
+|---|---|---|
+| **Gambar** | ![Gray](output/steps/1_color_space_gray.png) | ![Blur](output/steps/2_gaussian_blur.png) |
+| **Yang berubah** | Foto terlihat tajam tapi penuh bintik-bintik kecil dari tekstur aspal | Foto terlihat lebih halus, transisi antar area lebih lembut |
+| **Noise** | Banyak bintik kecil terlihat di permukaan aspal | Bintik-bintik kecil berkurang |
+| **Tepi mobil** | Tajam tapi berisik | Sedikit lebih lunak, lebih bersih |
 
-**Alasan:** Tanpa blurring, thresholding cenderung menghasilkan banyak bintik putih kecil (noise) yang nantinya akan salah dihitung sebagai objek. Gaussian Blur mengurangi frekuensi tinggi pada citra sehingga thresholding bekerja lebih stabil.
+**Cara kerja:** Gaussian Blur mengonvolusi citra dengan kernel Gaussian 5x5. Setiap piksel baru merupakan rata-rata tertimbang dari piksel-piksel di sekitarnya, di mana piksel terdekat mendapat bobot paling tinggi. Operasi ini menekan komponen frekuensi tinggi seperti noise dan detail tekstur kecil yang tidak relevan bagi deteksi kendaraan.
+
+**Mengapa perlu di-blur dulu?** Kalau langsung diproses tanpa dihaluskan, bintik-bintik kecil di aspal bisa ikut terbaca sebagai objek dan akhirnya salah dihitung sebagai mobil. Proses blur ini ibarat "menyaring" detail yang tidak penting sebelum lanjut ke tahap berikutnya.
 
 ---
 
-### Tahap 3: Thresholding dengan Metode Otsu
+### Tahap 3: Otsu Thresholding  — Ubah Jadi Hitam-Putih
 
 ```python
 ret, thresh = cv2.threshold(blur, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
 ```
 
-Metode Otsu digunakan untuk binarisasi otomatis. Algoritma ini menghitung nilai threshold optimal secara statistik berdasarkan histogram citra, dengan memaksimalkan variansi antar kelas (piksel objek dan latar belakang).
+| Aspek | Sebelum Thresholding (Blur) | Sesudah Otsu Thresholding |
+|-------|-----------------------------|--------------------------|
+| **Gambar** | ![Blur](output/steps/2_gaussian_blur.png) | ![Otsu](output/steps/3_otsu_threshold.png) |
+| **File** | `steps/2_gaussian_blur.png` | `steps/3_otsu_threshold.png` |
+| **Representasi** | Grayscale (0-255) | Biner: 0 (hitam) atau 255 (putih) |
+| **Piksel putih** | Tidak ada | Area dengan intensitas di atas nilai threshold Otsu |
+| **Piksel hitam** | Tidak ada | Area aspal dan latar gelap |
+| **Nilai threshold** | Tidak berlaku | Dihitung otomatis oleh algoritma Otsu |
 
-**Alasan:** Metode Otsu tidak memerlukan penentuan nilai threshold secara manual, sehingga lebih adaptif terhadap variasi pencahayaan pada citra aerial. Hasilnya adalah citra biner di mana piksel putih merepresentasikan area objek (mobil) dan piksel hitam merepresentasikan latar belakang (aspal).
+**Cara kerja Otsu:** Algoritma Otsu mencari nilai threshold T yang paling tepat untuk memisahkan dua kelompok piksel (terang dan gelap), yaitu latar belakang (intensitas < T) dan objek (intensitas >= T). Nilai T optimal adalah titik yang paling jelas memisahkan dua puncak distribusi pada histogram citra.
+
+**Keunggulan dibanding threshold manual:** Tidak memerlukan penentuan nilai threshold secara manual sehingga lebih adaptif terhadap variasi pencahayaan pada citra aerial.
+
+**Catatan:** Mobil berwarna gelap kadang tidak tertangkap di sini karena kecerahan warnanya terlalu mirip dengan aspal.
 
 ---
 
-### Tahap 4: Operasi Morfologi
+### Tahap 4a: Morphological Closing
 
-#### 4a. Morphological Closing
+Setelah diubah jadi hitam-putih, bentuk mobil sering terlihat berlubang karena bagian kaca atau atap warnanya berbeda. Tahap ini menutup lubang-lubang tersebut.
 
 ```python
+kernel = np.ones((3, 3), np.uint8)
 morph_close = cv2.morphologyEx(thresh, cv2.MORPH_CLOSE, kernel, iterations=2)
 ```
 
-Closing merupakan kombinasi dilasi diikuti erosi. Operasi ini menutup celah atau lubang kecil di dalam area objek yang muncul akibat variasi warna permukaan kendaraan (kaca depan, atap, dst.).
+| Aspek | Sebelum (Thresholding) | Sesudah (Closing) |
+|---|---|---|
+| **Gambar** | ![Otsu](output/steps/3_otsu_threshold.png) | ![Close](output/steps/4_morphology_close.png) |
+| **Yang berubah** | Bentuk mobil terlihat berlubang dan tidak utuh | Bentuk mobil menjadi lebih solid dan penuh |
+| **Lubang di dalam objek** | Banyak, terutama di area kaca dan atap | Sebagian besar tertutup |
+| **Ukuran objek** | Kecil dan tidak utuh | Sedikit lebih besar karena proses pengisian |
+| **Batas tepi** | Tidak rata dan berlubang | Lebih halus dan penuh |
 
-**Alasan:** Badan mobil yang memiliki warna dan tekstur tidak seragam sering kali menghasilkan area putih yang tidak utuh setelah thresholding. Closing memastikan tiap kendaraan terbaca sebagai satu blob yang solid.
+**Cara kerja:** Closing merupakan Dilasi diikuti Erosi. Dilasi terlebih dahulu memperluas area putih sehingga celah kecil tertutup. Erosi kemudian mengecilkan kembali area ke ukuran semula, tetapi celah yang sudah tertutup tidak terbuka lagi.
 
-#### 4b. Morphological Opening
+Proses ini dilakukan **2 kali** karena satu kali saja tidak cukup untuk menutup semua celah, terutama yang agak lebar seperti area kaca depan mobil.
 
+---
+
+### Tahap 4b: Morphological Opening — Bersihkan Bintik Noise
+
+Setelah closing, masih ada bintik-bintik putih kecil yang tersisa di area aspal dan bukan bagian dari mobil. Tahap ini membersihkannya.
 ```python
 morph_clean = cv2.morphologyEx(morph_close, cv2.MORPH_OPEN, kernel, iterations=1)
 ```
 
-Opening merupakan kombinasi erosi diikuti dilasi. Operasi ini menghilangkan bintik putih kecil sisa noise yang tersebar di area aspal.
+| Aspek | Sebelum (Closing) | Sesudah (Opening) |
+|---|---|---|
+| **Gambar** | ![Close](output/steps/4_morphology_close.png) | ![Open](output/steps/5_morphology_open_clean.png) |
+| **Yang berubah** | Masih ada bintik putih kecil di area aspal | Bintik-bintik kecil hilang |
+| **Bentuk mobil** | Utuh dan solid | Tetap utuh, tidak ikut terhapus |
+| **Kebersihan gambar** | Cukup bersih | Lebih bersih, siap untuk penghitungan |
 
-**Alasan:** Setelah closing, masih mungkin terdapat artefak kecil yang tidak merepresentasikan kendaraan. Opening membersihkan artefak tersebut tanpa merusak struktur blob utama yang berukuran lebih besar.
+**Cara kerja:** Opening merupakan Erosi diikuti Dilasi. Erosi menghapus piksel putih pada tepi semua objek, bintik-bintik kecil yang dimensinya lebih kecil dari kernel langsung hilang sepenuhnya. Dilasi kemudian mengembalikan ukuran objek besar yang tersisa, tetapi bintik kecil yang sudah terhapus tidak muncul kembali.
+
+**Mengapa closing dulu baru opening?** Kalau urutannya dibalik, lubang di dalam mobil yang baru saja ditutup akan terbuka lagi. Jadi closing harus selalu dilakukan lebih dulu.
 
 ---
 
-### Tahap 5: Deteksi Kontur dan Filtering Berdasarkan Area
+### Perbandingan Seluruh Tahap Morfologi
+
+| | Otsu Threshold | Setelah Closing | Setelah Opening |
+|---|---|---|---|
+| **Gambar** | ![Otsu](output/steps/3_otsu_threshold.png) | ![Close](output/steps/4_morphology_close.png) | ![Open](output/steps/5_morphology_open_clean.png) |
+| **Kondisi bentuk mobil** | Berlubang, tidak utuh | Solid, sedikit membesar | Solid, bersih dari noise |
+| **Celah di dalam objek** | Banyak | Tertutup | Tertutup |
+| **Bintik noise di aspal** | Ada | Masih ada | Dihilangkan |
+| **Kesiapan untuk kontur** | Belum siap | Cukup siap | Siap |
+
+---
+
+### Tahap 5: Deteksi Kontur dan Perhitungan Mobil
+
+Program mencari semua bentuk (kontur) yang ada di gambar, lalu menyaring mana yang kemungkinan besar adalah mobil berdasarkan ukurannya.
 
 ```python
 contours, _ = cv2.findContours(morph_clean, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 ```
 
-Fungsi `findContours` dengan mode `RETR_EXTERNAL` mendeteksi seluruh kontur luar (batas terluar) pada citra biner hasil morfologi. Setiap kontur kemudian difilter berdasarkan luas area:
+| Aspek | Keterangan |
+|-------|-----------|
+| **Mode deteksi** | `RETR_EXTERNAL`: hanya mendeteksi kontur paling luar, kontur di dalam objek diabaikan |
+| **Metode aproksimasi** | `CHAIN_APPROX_SIMPLE`: mengompresi segmen menjadi titik ujungnya saja untuk efisiensi memori |
+| **Filter MIN_AREA** | 100 piksel: Bentuk yang terlalu kecil dari ini dianggap noise, bukan mobil |
+| **Filter MAX_AREA** | 2000 piksel: Bentuk yang terlalu besar dari ini dianggap bukan satu mobil (mungkin dua mobil yang menyatu atau objek lain) |
+| **Bounding box** | Kotak hijau digambar pada tiap kendaraan yang lolos filter |
+| **Label** | Nomor urut berwarna merah ditulis di atas tiap bounding box |
 
-| Parameter | Nilai | Keterangan |
-|-----------|-------|-----------|
-| `MIN_AREA` | 100 piksel | Batas bawah untuk mengabaikan noise kecil |
-| `MAX_AREA` | 2000 piksel | Batas atas untuk mengabaikan area besar yang bukan mobil individu |
-
-Kontur yang memenuhi kriteria area digambar sebagai bounding box berwarna hijau pada citra output, disertai nomor urut berwarna merah.
-
-**Alasan pemilihan range area:** Mobil pada citra aerial memiliki ukuran piksel yang relatif seragam. Rentang 100 hingga 2000 piksel dipilih setelah pengamatan visual terhadap ukuran tiap kendaraan pada citra, sehingga noise dan objek non-kendaraan (misalnya marka jalan, bayangan besar) dapat dieksklusi.
-
----
-
-## Visualisasi Tahapan Pipeline
-
-Seluruh hasil antarpipeline disimpan di folder `output/steps/`. Berikut ringkasan visualisasi tiap tahapan:
-
-| No. | Nama File | Deskripsi |
-|-----|-----------|-----------|
-| 1 | `1_color_space_gray.png` | Citra grayscale hasil konversi dari BGR |
-| 2 | `1_color_space_hsv_v.png` | Channel V dari ruang warna HSV |
-| 3 | `1_color_space_lab_l.png` | Channel L dari ruang warna LAB |
-| 4 | `2_gaussian_blur.png` | Hasil setelah Gaussian Blur (kernel 5x5) |
-| 5 | `3_otsu_threshold.png` | Citra biner hasil thresholding Otsu |
-| 6 | `4_morphology_close.png` | Setelah Morphological Closing (2 iterasi) |
-| 7 | `5_morphology_open_clean.png` | Setelah Morphological Opening (1 iterasi) |
-| 8 | `output/result.png` | Hasil akhir dengan bounding box dan nomor urut |
+| Aspek | Sesudah Opening (Input Kontur) | Hasil Akhir Deteksi |
+|-------|-------------------------------|---------------------|
+| **Gambar** | ![Open](output/steps/5_morphology_open_clean.png) | ![Result](output/result.png) |
+| **Representasi** | Citra biner, warna putih = kandidat kendaraan | Citra asli dengan bounding box hijau dan nomor merah |
+| **Jumlah objek** | Seluruh bentuk termasuk noise sisa | Hanya bentuk yang memenuhi rentang area 100-2000 piksel |
 
 ---
 
@@ -118,41 +196,26 @@ Seluruh hasil antarpipeline disimpan di folder `output/steps/`. Berikut ringkasa
 
 ### Kendala yang Dihadapi
 
-1. **Mobil berdekatan atau bersentuhan:** Setelah thresholding dan morfologi, dua atau lebih kendaraan yang parkir berdekatan dapat bergabung menjadi satu blob tunggal. Akibatnya, program menghitung kelompok tersebut sebagai satu objek, sehingga jumlah deteksi menjadi lebih rendah dari jumlah sebenarnya.
-
-2. **Variasi warna kendaraan:** Kendaraan berwarna gelap (hitam atau abu tua) memiliki intensitas piksel yang mendekati aspal, sehingga sulit dibedakan setelah thresholding sederhana berbasis grayscale.
-
-3. **Bayangan dan pantulan cahaya:** Bayangan panjang yang jatuh dari kendaraan dapat memperbesar ukuran blob dan memengaruhi akurasi bounding box maupun hitungan area.
-
-4. **Sensitivitas parameter MIN\_AREA dan MAX\_AREA:** Rentang area yang digunakan bersifat statis. Apabila resolusi citra berbeda, rentang ini perlu dikalibrasi ulang secara manual.
-
-### Perkiraan Akurasi
-
-Akurasi program dipengaruhi langsung oleh kondisi parkiran dalam citra:
-
-- Kendaraan yang terparkir rapi dengan jarak cukup cenderung terdeteksi dengan baik.
-- Kendaraan yang berimpitan atau berwarna gelap berpotensi tidak terdeteksi (false negative).
-- Noise besar yang lolos dari morfologi berpotensi terhitung sebagai kendaraan (false positive).
+| No. | Kendala | Dampak pada Hasil | Penyebabnya |
+|-----|---------|-------------------|-------------|
+| 1 | Mobil yang parkir berdekatan menyatu jadi satu bentuk | Dua atau lebih mobil terhitung sebagai satu | Jarak antarmobil terlalu kecil sehingga bentuknya bergabung setelah diproses |
+| 2 | Mobil berwarna gelap (hitam, abu tua) tidak terdeteksi | Mobil tersebut tidak muncul di hasil dan tidak terhitung | Warna gelapnya terlalu mirip dengan aspal sehingga ikut "hilang" saat thresholding |
+| 3 | Batas ukuran (100-2000 piksel) tidak fleksibel | Kalau foto diambil dari ketinggian berbeda, batas ini perlu diubah manual | Nilai batas tidak disesuaikan secara otomatis dengan ukuran foto |
 
 ### Potensi Peningkatan
 
-1. **Watershed Algorithm:** Algoritma watershed (`cv2.watershed`) dapat memisahkan kendaraan yang berdekatan dan bergabung menjadi satu blob, sehingga penghitungan menjadi lebih akurat.
-
-2. **Segmentasi berbasis warna (HSV/LAB):** Menambahkan filter warna untuk mengeksklusi area aspal secara eksplisit dapat meningkatkan kualitas biner awal sebelum morfologi.
-
-3. **Distance Transform:** Kombinasi distance transform dengan thresholding lokal dapat membantu memisahkan objek yang saling berdekatan.
-
-4. **Adaptive Thresholding:** Menggunakan `cv2.adaptiveThreshold` dapat menangani variasi pencahayaan lokal yang tidak merata pada citra aerial.
-
-5. **Parameter area berbasis persentase resolusi:** Mengubah MIN\_AREA dan MAX\_AREA menjadi nilai relatif terhadap resolusi citra agar program lebih adaptif terhadap berbagai ukuran gambar.
-
+| No. | Teknik | Manfaatnya |
+|-----|--------|-----------|
+| 1 | Watershed Algorithm (`cv2.watershed`) | Bisa memisahkan mobil-mobil yang menyatu agar masing-masing terhitung terpisah |
+| 2 | Distance Transform | Membantu memisahkan objek yang saling menempel sebelum dihitung |
+| 3 | Batas ukuran otomatis | Batas 100-2000 piksel disesuaikan otomatis dengan resolusi foto agar tidak perlu diubah manual |
 ---
 
 ## Cara Menjalankan Program
 
 ### Prasyarat
 
-Pastikan Python versi 3.7 atau lebih baru sudah terpasang. Instal seluruh dependensi yang diperlukan menggunakan perintah berikut:
+Pastikan Python sudah terpasang. Instal seluruh dependensi menggunakan perintah berikut:
 
 ```bash
 pip install opencv-python numpy matplotlib
@@ -163,29 +226,13 @@ pip install opencv-python numpy matplotlib
 Pastikan struktur folder berada dalam kondisi berikut sebelum menjalankan program:
 
 ```
-mp2-object-counting/
+MP2-Object-Counting/
 ├── README.md
 ├── counting.py
-└── TUGAS/
-    └── parking_ori.jpg
-```
-
-### Menjalankan Program
-
-Jalankan perintah berikut dari direktori utama proyek:
-
-```bash
-python counting.py
-```
-
-### Output yang Dihasilkan
-
-Setelah program selesai berjalan, hasil akan tersimpan secara otomatis pada:
-
-```
-TUGAS/
+├── input/
+│   └── parking_ori.jpg
 └── output/
-    ├── result.png                       
+    ├── result.png
     └── steps/
         ├── 1_color_space_gray.png
         ├── 1_color_space_hsv_v.png
@@ -196,4 +243,12 @@ TUGAS/
         └── 5_morphology_open_clean.png
 ```
 
-Selain itu, program akan menampilkan dua jendela visualisasi matplotlib secara langsung: satu untuk perbandingan color space dan satu untuk alur kerja pipeline lengkap dari awal hingga deteksi akhir.
+### Menjalankan Program
+
+Jalankan perintah berikut dari direktori utama proyek:
+
+```bash
+python counting.py
+```
+
+Program akan mencetak jumlah kendaraan yang terdeteksi ke terminal dan menyimpan seluruh file output secara otomatis. Selain itu, dua jendela visualisasi matplotlib akan ditampilkan secara langsung: satu untuk perbandingan format warna di Tahap 1 dan satu untuk alur kerja pipeline lengkap dari citra asli hingga hasil deteksi akhir.
