@@ -105,7 +105,6 @@ ret, thresh = cv2.threshold(blur, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
 
 **Cara kerja Otsu:** Algoritma Otsu mencari nilai threshold T yang paling tepat untuk memisahkan dua kelompok piksel (terang dan gelap), yaitu latar belakang (intensitas < T) dan objek (intensitas >= T). Nilai T optimal adalah titik yang paling jelas memisahkan dua puncak distribusi pada histogram citra.
 
-**Keunggulan dibanding threshold manual:** Tidak memerlukan penentuan nilai threshold secara manual sehingga lebih adaptif terhadap variasi pencahayaan pada citra aerial.
 
 **Catatan:** Mobil berwarna gelap kadang tidak tertangkap di sini karena kecerahan warnanya terlalu mirip dengan aspal.
 
