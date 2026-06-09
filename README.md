@@ -17,33 +17,22 @@ Program mendeteksi **29 mobil** pada citra input `parking_ori.jpg`.
 
 Pipeline yang digunakan adalah pendekatan **threshold-based** yang dikombinasikan dengan operasi morfologi. Secara garis besar, program ini bekerja dengan cara mengubah foto berwarna menjadi hitam-putih, lalu membersihkan hasilnya, dan terakhir menghitung objek yang bentuk dan ukurannya menyerupai mobil.
 
-```
-Citra Asli (BGR)
-      |
-      v
-[Tahap 1] Konversi Color Space  -->  Grayscale / HSV-V / LAB-L
-      |
-      v  (dipilih: Grayscale)
-[Tahap 2] Gaussian Blur (kernel 5x5) -->  haluskan foto, kurangi noise
-      |
-      v
-[Tahap 3] Otsu Thresholding  -->  ubah jadi hitam-putih otomatis
-      |
-      v
-[Tahap 4a] Morphological Closing (kernel 3x3, 2 iterasi)
-      |
-      v
-[Tahap 4b] Morphological Opening (kernel 3x3, 1 iterasi)
-      |
-      v
-[Tahap 5] findContours + Filter Area  -->  Bounding Box + Penghitungan
-```
+### Alur Pengolahan Citra
+
+1. Citra Asli (BGR)
+2. Konversi Color Space → Grayscale
+3. Gaussian Blur (Kernel 5×5)
+4. Otsu Thresholding
+5. Morphological Closing (Kernel 3×3, 2 Iterasi)
+6. Morphological Opening (Kernel 3×3, 1 Iterasi)
+7. findContours + Filter Area
+8. Bounding Box dan Penghitungan Objek
 
 ---
 
 ## Visualisasi dan Analisis Tahapan Pipeline
 
-### Tahap 0: Citra Asli
+### Tahap 0 : Citra Asli
 
 | | |
 |---|---|
@@ -54,7 +43,7 @@ Citra Asli (BGR)
 
 ---
 
-### Tahap 1: Pilih Format Warna yang Paling Jelas
+### Tahap 1 : Pilih Format Warna yang Paling Jelas
 
 Citra asli dikonversi ke tiga ruang warna, lalu memilih mana yang paling jelas membedakan mobil dari aspal.
 
@@ -69,7 +58,7 @@ Citra asli dikonversi ke tiga ruang warna, lalu memilih mana yang paling jelas m
 
 ---
 
-### Tahap 2: Gaussian Blur
+### Tahap 2 : Gaussian Blur
 
 ```python
 blur = cv2.GaussianBlur(gray, (5, 5), 0)
@@ -89,7 +78,7 @@ Setelah foto diubah ke grayscale, foto dihaluskan dulu sebelum diproses lebih la
 
 ---
 
-### Tahap 3: Otsu Thresholding  — Ubah Jadi Hitam-Putih
+### Tahap 3 : Otsu Thresholding  — Ubah Jadi Hitam-Putih
 
 ```python
 ret, thresh = cv2.threshold(blur, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
@@ -110,7 +99,7 @@ ret, thresh = cv2.threshold(blur, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
 
 ---
 
-### Tahap 4a: Morphological Closing
+### Tahap 4a : Morphological Closing
 
 Setelah diubah jadi hitam-putih, bentuk mobil sering terlihat berlubang karena bagian kaca atau atap warnanya berbeda. Tahap ini menutup lubang-lubang tersebut.
 
@@ -133,7 +122,7 @@ Proses ini dilakukan **2 kali** karena satu kali saja tidak cukup untuk menutup 
 
 ---
 
-### Tahap 4b: Morphological Opening — Bersihkan Bintik Noise
+### Tahap 4b : Morphological Opening — Bersihkan Bintik Noise
 
 Setelah closing, masih ada bintik-bintik putih kecil yang tersisa di area aspal dan bukan bagian dari mobil. Tahap ini membersihkannya.
 ```python
@@ -165,7 +154,7 @@ morph_clean = cv2.morphologyEx(morph_close, cv2.MORPH_OPEN, kernel, iterations=1
 
 ---
 
-### Tahap 5: Deteksi Kontur dan Perhitungan Mobil
+### Tahap 5 : Deteksi Kontur dan Perhitungan Mobil
 
 Program mencari semua bentuk (kontur) yang ada di gambar, lalu menyaring mana yang kemungkinan besar adalah mobil berdasarkan ukurannya.
 
