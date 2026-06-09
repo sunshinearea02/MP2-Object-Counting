@@ -8,9 +8,9 @@
 
 ## Jumlah Mobil Terdeteksi
 
-Program mendeteksi **91 mobil** pada citra input `parking_ori.jpg`.
+Program mendeteksi **29 mobil** pada citra input `parking_ori.jpg`.
 
-> Angka ini didapat setelah menyaring semua objek berdasarkan ukurannya (filtering kontur) — hanya objek dengan luas antara 100 hingga 2000 piksel yang dihitung sebagai mobil.
+> Angka ini didapat setelah menyaring semua objek berdasarkan ukurannya (filtering kontur) — hanya objek dengan luas antara 3000 hingga 50000 piksel yang dihitung sebagai mobil.
 ---
 
 ## Penjelasan Pipeline
@@ -179,8 +179,8 @@ contours, _ = cv2.findContours(morph_clean, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_
 |-------|-----------|
 | **Mode deteksi** | `RETR_EXTERNAL`: hanya mendeteksi kontur paling luar, kontur di dalam objek diabaikan |
 | **Metode aproksimasi** | `CHAIN_APPROX_SIMPLE`: mengompresi segmen menjadi titik ujungnya saja untuk efisiensi memori |
-| **Filter MIN_AREA** | 100 piksel: Bentuk yang terlalu kecil dari ini dianggap noise, bukan mobil |
-| **Filter MAX_AREA** | 2000 piksel: Bentuk yang terlalu besar dari ini dianggap bukan satu mobil (mungkin dua mobil yang menyatu atau objek lain) |
+| **Filter MIN_AREA** | 300 piksel: Bentuk yang terlalu kecil dari ini dianggap noise, bukan mobil |
+| **Filter MAX_AREA** | 50000 piksel: Bentuk yang terlalu besar dari ini dianggap bukan satu mobil (mungkin dua mobil yang menyatu atau objek lain) |
 | **Bounding box** | Kotak hijau digambar pada tiap kendaraan yang lolos filter |
 | **Label** | Nomor urut berwarna merah ditulis di atas tiap bounding box |
 
